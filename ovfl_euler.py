@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 def dynamics(xl, vl, x, v, params):
     alpha = params['alpha']
+    beta = params['beta']
     vmax_desired = params['vmax_desired']
-    # beta = params['beta']
 
     # Leading
     xl_dot = vl
@@ -17,8 +17,9 @@ def dynamics(xl, vl, x, v, params):
     # Ego
     x_dot = v
     v_optimal = np.tanh(delta_x - 2) + np.tanh(2)
+    # Set bounds on v
     v_optimal = np.clip(v_optimal, 0, vmax_desired)
-    v_dot = alpha * (v_optimal - v)
+    v_dot = alpha * (v_optimal - v) + beta * (vl - v) / (xl - x) ** 2
 
     return xl_dot, vl_dot, x_dot, v_dot
 
@@ -35,6 +36,9 @@ def euler(xl0, vl0, x0, v0, params, dt, T):
     rel_x = []
     rel_v = []
 
+    rel_x.append(xl - x)
+    rel_v.append(vl - v)
+
     for _ in range(num_steps):
         xl_dot, vl_dot, x_dot, v_dot = dynamics(xl, vl, x, v, params)
 
@@ -49,17 +53,18 @@ def euler(xl0, vl0, x0, v0, params, dt, T):
     return np.array(rel_x), np.array(rel_v)
 
 if __name__ == "__main__":
-    xl0 = 5.0
+    xl0 = 2.0
     vl0 = 1.0
-    x0 = 0.0
-    v0 = 2.0
+    x0 = 1.0
+    v0 = 1.5
 
     params = {
         'alpha': 0.5,
+        'beta': 1.0,
         'vmax_desired': 1.964
     }
 
-    dt = 0.01
+    dt = 0.01 # 10^-3
     T = 20.0
 
     # Simulation
@@ -70,8 +75,8 @@ if __name__ == "__main__":
     # Plot
     plt.figure(figsize=(10, 7))
     plt.plot(rel_x, rel_v, label='trajectory', color='blue')
-    plt.scatter(rel_x[0], rel_v[0], color='green', s=100, zorder=5, label='start')
-    plt.scatter(rel_x[-1], rel_v[-1], color='red', s=100, zorder=5, label='end')
+    plt.scatter(rel_x[0], rel_v[0], color='cyan', s=100, zorder=5, label='start')
+    plt.scatter(rel_x[-1], rel_v[-1], color='orange', s=100, zorder=5, label='end')
 
     plt.title('Relative Velocity vs. Relative Position')
     plt.xlabel('Relative Position ($x_l - x$)')
@@ -81,4 +86,4 @@ if __name__ == "__main__":
     plt.axvline(0, color='gray', linestyle='--', linewidth=0.8)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('plot.png')
+    plt.savefig('ovfl_euler.png')
