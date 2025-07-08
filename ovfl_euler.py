@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -17,9 +19,9 @@ def dynamics(xl, vl, x, v, params):
     # Ego
     x_dot = v
     v_optimal = np.tanh(delta_x - 2) + np.tanh(2)
-    # Set bounds on v
+    # Set bounds on v_optimal
     v_optimal = np.clip(v_optimal, 0, vmax_desired)
-    v_dot = alpha * (v_optimal - v) + beta * (vl - v) / (xl - x) ** 2
+    v_dot = alpha * (v_optimal - v) + beta * delta_v / delta_x ** 2
 
     return xl_dot, vl_dot, x_dot, v_dot
 
@@ -64,7 +66,7 @@ if __name__ == "__main__":
         'vmax_desired': 1.964
     }
 
-    dt = 0.01 # 10^-3
+    dt = 0.01
     T = 20.0
 
     # Simulation
