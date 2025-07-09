@@ -79,14 +79,14 @@ def rk4(xl0, vl0, x0, v0, params, dt, T):
     return np.array(rel_x), np.array(rel_v)
 
 if __name__ == "__main__":
-    xl0 = 2.0
+    xl0 = 1.5
     vl0 = 1.0
     x0 = 1.0
-    v0 = 1.5
+    v0 = 2.0
 
     params = {
         'alpha': 0.5,
-        'beta': 1.0,
+        'beta': 0.5,
         'vmax_desired': 1.964
     }
 
