@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 def dynamics(xl, vl, x, v, params):
     alpha = params['alpha']
-    beta = params['beta']
     vmax_desired = params['vmax_desired']
 
     # Leading
@@ -21,13 +20,12 @@ def dynamics(xl, vl, x, v, params):
     v_optimal = np.tanh(delta_x - 2) + np.tanh(2)
     # Set bounds on v_optimal
     v_optimal = np.clip(v_optimal, 0, vmax_desired)
-    v_dot = alpha * (v_optimal - v) + beta * delta_v / delta_x ** 2
+    v_dot = alpha * (v_optimal - v)
 
     return xl_dot, vl_dot, x_dot, v_dot
 
-def euler(xl0, vl0, x0, v0, params, dt, T):
+def rk4(xl0, vl0, x0, v0, params, dt, T):
     num_steps = int(T / dt)
-    # time_points = np.linspace(0, T, num_steps)
 
     # Initial
     xl = xl0
@@ -42,12 +40,40 @@ def euler(xl0, vl0, x0, v0, params, dt, T):
     rel_v.append(vl - v)
 
     for _ in range(num_steps):
-        xl_dot, vl_dot, x_dot, v_dot = dynamics(xl, vl, x, v, params)
+        # K1
+        k1_xl_dot, k1_vl_dot, k1_x_dot, k1_v_dot = dynamics(xl, vl, x, v, params)
 
-        xl += xl_dot * dt
-        vl += vl_dot * dt
-        x += x_dot * dt
-        v += v_dot * dt
+        # K2
+        k2_xl_dot, k2_vl_dot, k2_x_dot, k2_v_dot = dynamics(
+            xl + 0.5 * dt * k1_xl_dot,
+            vl + 0.5 * dt * k1_vl_dot,
+            x + 0.5 * dt * k1_x_dot,
+            v + 0.5 * dt * k1_v_dot,
+            params
+        )
+
+        # K3
+        k3_xl_dot, k3_vl_dot, k3_x_dot, k3_v_dot = dynamics(
+            xl + 0.5 * dt * k2_xl_dot,
+            vl + 0.5 * dt * k2_vl_dot,
+            x + 0.5 * dt * k2_x_dot,
+            v + 0.5 * dt * k2_v_dot,
+            params
+        )
+
+        # K4
+        k4_xl_dot, k4_vl_dot, k4_x_dot, k4_v_dot = dynamics(
+            xl + dt * k3_xl_dot,
+            vl + dt * k3_vl_dot,
+            x + dt * k3_x_dot,
+            v + dt * k3_v_dot,
+            params
+        )
+
+        xl += (dt / 6) * (k1_xl_dot + 2 * k2_xl_dot + 2 * k3_xl_dot + k4_xl_dot)
+        vl += (dt / 6) * (k1_vl_dot + 2 * k2_vl_dot + 2 * k3_vl_dot + k4_vl_dot)
+        x += (dt / 6) * (k1_x_dot + 2 * k2_x_dot + 2 * k3_x_dot + k4_x_dot)
+        v += (dt / 6) * (k1_v_dot + 2 * k2_v_dot + 2 * k3_v_dot + k4_v_dot)
 
         rel_x.append(xl - x)
         rel_v.append(vl - v)
@@ -55,14 +81,13 @@ def euler(xl0, vl0, x0, v0, params, dt, T):
     return np.array(rel_x), np.array(rel_v)
 
 if __name__ == "__main__":
-    xl0 = 1.5
+    xl0 = 2.5
     vl0 = 1.0
     x0 = 1.0
-    v0 = 2.0
+    v0 = 1.9
 
     params = {
         'alpha': 0.5,
-        'beta': 1.0,
         'vmax_desired': 1.964
     }
 
@@ -70,7 +95,7 @@ if __name__ == "__main__":
     T = 20.0
 
     # Simulation
-    rel_x, rel_v = euler(xl0, vl0, x0, v0, params, dt, T)
+    rel_x, rel_v = rk4(xl0, vl0, x0, v0, params, dt, T)
 
 
 
@@ -88,4 +113,4 @@ if __name__ == "__main__":
     plt.axvline(0, color='gray', linestyle='--', linewidth=0.8)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('ovfl_euler.png')
+    plt.savefig('ovm.png')

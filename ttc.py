@@ -102,6 +102,7 @@ def simulate(xl0, vl0, x0, v0, params, calculate_ttc=False):
                 return i + 1
             if vl - v > 0:
                 return np.inf
+
         else:
             rel_x.append(xl - x)
             rel_v.append(vl - v)
@@ -109,10 +110,10 @@ def simulate(xl0, vl0, x0, v0, params, calculate_ttc=False):
     return np.array(rel_x), np.array(rel_v) if not calculate_ttc else np.inf
 
 if __name__ == "__main__":
-    xl0 = 1.5
+    xl0 = 2.5
     vl0 = 1.0
     x0 = 1.0
-    v0 = 2.0
+    v0 = 1.9
 
     params = {
         'alpha': 0.5,
@@ -143,4 +144,4 @@ if __name__ == "__main__":
     plt.axvline(0, color='gray', linestyle='--', linewidth=0.8)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('ovfl_ttc_rk4.png')
+    plt.savefig('ttc.png')
