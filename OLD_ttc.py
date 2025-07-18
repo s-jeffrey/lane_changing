@@ -18,6 +18,7 @@ def dynamics(xl, vl, x, v, params, ttc=None):
     delta_x = xl - x
     delta_v = vl - v
     v_optimal = np.clip(np.tanh(delta_x - 2) + np.tanh(2), 0, vmax_desired)
+    # Use OVM to simulate ttc
     if ttc is None:
         v_dot = alpha * (v_optimal - v)
     else:
@@ -71,23 +72,7 @@ def rk4(xl, vl, x, v, params, ttc=None):
 
     return xl, vl, x, v
 
-def calculate_ttc(xl, vl, x, v, params):
-    dt = params['dt']
-    T = params['T']
-    
-    num_steps = int(T / dt)
-
-    for i in range(num_steps):
-        xl, vl, x, v = rk4(xl, vl, x, v, params)
-
-        if xl - x <= 0:
-            print(f"TTC is {i * dt} seconds")
-            return i * dt
-        if vl - v >= 0:
-            return 1
-    return 2
-
-def simulate(xl0, vl0, x0, v0, params):
+def simulate(xl0, vl0, x0, v0, params, calculate_ttc=False):
     dt = params['dt']
     T = params['T']
     
@@ -110,18 +95,35 @@ def simulate(xl0, vl0, x0, v0, params):
     rel_v.append(vl - v)
 
     for i in range(num_steps):
-        # Calculates ttc in seconds
-        ttc = calculate_ttc(xl, vl, x, v, params)
-        if ttc == 0:
-            print(f"at {i * dt} seconds")
-        xl, vl, x, v = rk4(xl, vl, x, v, params, ttc)
-        
-        rel_x.append(xl - x)
-        rel_v.append(vl - v)
-        time_plot.append(i * dt)
-        ttc_plot.append(ttc)
+        '''
+        ttc is None means we need to calculate the ttc; e.g.,
+        Use the OVM model and run the simulation to calculate ttc
+        It does NOT mean ttc = 0
+        '''
+        ttc = None
 
-    return np.array(rel_x), np.array(rel_v), np.array(time_plot), np.array(ttc_plot)
+        if not calculate_ttc:
+            ttc = simulate(xl, vl, x, v, params, calculate_ttc=True) * dt # Calculates ttc in seconds
+            # For plotting ttc vs. time
+            ttc_plot.append(ttc)
+            time_plot.append(i * dt)
+
+        # If we are on the 'first' loop (where we have already calculated ttc by this point), pass ttc into rk4() and thus dynamics()
+        # Otherwise if we are supposed to be calculating ttc (calculate_ttc = True), pass ttc = None into rk4() and dynamics()
+        xl, vl, x, v = rk4(xl, vl, x, v, params, ttc if not calculate_ttc else None)
+
+        if calculate_ttc:
+            # If collision happens, report number of time steps as ttc
+            if xl - x <= 0:
+                return i + 1
+            if vl - v > 0:
+                return 100
+        else:
+            # For plotting rel_v vs. rel_x
+            rel_x.append(xl - x)
+            rel_v.append(vl - v)
+        
+    return np.array(rel_x), np.array(rel_v), np.array(time_plot), np.array(ttc_plot) if not calculate_ttc else exit(1)
 
 if __name__ == "__main__":
     # Set initial conditions here
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     }
 
     # Simulation
-    rel_x, rel_v, time_plot, ttc_plot = simulate(xl0, vl0, x0, v0, params)
+    rel_x, rel_v, time_plot, ttc_plot = simulate(xl0, vl0, x0, v0, params, calculate_ttc=False)
     print(rel_x, rel_v)
     print(time_plot, ttc_plot)
 
@@ -159,7 +161,7 @@ if __name__ == "__main__":
     plt.axvline(0, color='gray', linestyle='--', linewidth=0.8)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('ttc.png')
+    plt.savefig('OLD_ttc.png')
 
     # Plot ttc vs. time
     plt.figure(figsize=(10, 7))
@@ -170,4 +172,4 @@ if __name__ == "__main__":
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('ttc_time.png')
+    plt.savefig('OLD_ttc_time.png')
